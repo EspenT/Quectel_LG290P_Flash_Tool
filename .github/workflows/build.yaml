@@ -39,7 +39,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-serial-binary-x64
-          path: serial_test_x64.exe
+          path: quectool_x64.exe
   
   build-windows-x86:
     runs-on: windows-latest
@@ -59,13 +59,13 @@ jobs:
       - name: Build Serial Test (x86)
         shell: msys2 {0}
         run: |
-          gcc serial_test.c -o serial_test_x86.exe -lserialport -lsetupapi -lcfgmgr32 -static
+          gcc quectool.c -o quectool_x86.exe -lserialport -lsetupapi -lcfgmgr32 -static
   
       - name: Upload Binary
         uses: actions/upload-artifact@v4
         with:
           name: windows-serial-binary-x86
-          path: serial_test_x86.exe
+          path: quectool_x86.exe
 
   build-macos:
     runs-on: macos-latest
@@ -81,13 +81,13 @@ jobs:
       - name: Build Serial Test
         run: |
           # Use pkg-config to supply include paths and linker flags for libserialport
-          gcc $(pkg-config --cflags --libs libserialport) serial_test.c -o serial_test_macos
+          gcc $(pkg-config --cflags --libs libserialport) quectool.c -o quectool_macos
   
       - name: Upload Binary
         uses: actions/upload-artifact@v4
         with:
           name: macos-serial-binary
-          path: serial_test_macos
+          path: quectool_macos
 
   build-linux:
     runs-on: ubuntu-latest
@@ -103,13 +103,13 @@ jobs:
       - name: Build Serial Test
         run: |
           # Linker flags need to come after the source file to resolve symbols
-          gcc serial_test.c -o serial_test_linux $(pkg-config --cflags --libs libserialport)
+          gcc quectool.c -o quectool_linux $(pkg-config --cflags --libs libserialport)
   
       - name: Upload Binary
         uses: actions/upload-artifact@v4
         with:
           name: linux-serial-binary
-          path: serial_test_linux
+          path: quectool_linux
 
   build-arm:
     runs-on: ubuntu-latest
@@ -139,10 +139,10 @@ jobs:
       - name: Build Serial Test
         run: |
           # compile against the self-built ARM libserialport
-          arm-linux-gnueabihf-gcc serial_test.c -o serial_test_arm $(pkg-config --cflags --libs libserialport)
+          arm-linux-gnueabihf-gcc quectool.c -o quectool_arm $(pkg-config --cflags --libs libserialport)
 
       - name: Upload Binary
         uses: actions/upload-artifact@v4
         with:
           name: arm-serial-binary
-          path: serial_test_arm
+          path: quectool_arm
