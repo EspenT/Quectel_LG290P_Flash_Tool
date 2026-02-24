@@ -5,7 +5,6 @@ on:
     branches:
 
 jobs:
-  build-windows-x64:
     runs-on: windows-latest
     steps:
       - name: Checkout code
@@ -14,17 +13,26 @@ jobs:
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
         with:
-          msystem: UCRT64
+          msystem: MINGW32
           update: true
           install: >-
-            mingw-w64-ucrt-x86_64-gcc
-            mingw-w64-ucrt-x86_64-libserialport
+            mingw-w64-i686-gcc
   
-      - name: Build Serial Test (x64)
+      - name: Build Serial Test (x86)
         shell: msys2 {0}
         run: |
-          # We link setupapi and cfgmgr32 because libserialport needs them on Windows
-          gcc serial_test.c -o serial_test_x64.exe -lserialport -lsetupapi -lcfgmgr32 -static
+            # Build libserialport from source for i686
+            pacman -S --noconfirm git automake autoconf libtool pkg-config mingw-w64-i686-make
+            git clone https://github.com/sigrokproject/libserialport.git
+            cd libserialport
+            ./autogen.sh
+            MAKE=mingw32-make ./configure --host=i686-w64-mingw32 --prefix=$PWD/../libserialport-prefix --disable-dependency-tracking
+            MAKE=mingw32-make mingw32-make -j$(nproc)
+            MAKE=mingw32-make mingw32-make install
+            export PKG_CONFIG_LIBDIR=$PWD/../libserialport-prefix/lib/pkgconfig
+            cd ..
+            # Build your tool using the locally built libserialport
+            gcc quectool.c -o quectool_x86.exe $(pkg-config --cflags --libs libserialport) -lsetupapi -lcfgmgr32 -static
   
       - name: Upload Binary
         uses: actions/upload-artifact@v4
