@@ -10,7 +10,7 @@
   To compile for Windows: gcc quectool.c -o quectool.exe -lserialport -lsetupapi -lcfgmgr32 -static
 */
 
-#define TOOL_VERSION "1.0.0"
+#define TOOL_VERSION "0.0.1"
 
 #include <errno.h>
 #include <fcntl.h>
