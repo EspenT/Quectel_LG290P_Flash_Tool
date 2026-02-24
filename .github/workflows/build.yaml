@@ -1,0 +1,139 @@
+name: Serial Build
+
+on:
+  workflow_dispatch:
+    branches:
+
+jobs:
+  build-windows-x64:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+  
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-libserialport
+  
+      - name: Build Serial Test (x64)
+        shell: msys2 {0}
+        run: |
+          # We link setupapi and cfgmgr32 because libserialport needs them on Windows
+          gcc serial_test.c -o serial_test_x64.exe -lserialport -lsetupapi -lcfgmgr32 -static
+  
+      - name: Upload Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-serial-binary-x64
+          path: serial_test_x64.exe
+  
+  build-windows-x86:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+  
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW32
+          update: true
+          install: >-
+            mingw-w64-i686-gcc
+            mingw-w64-i686-libserialport
+  
+      - name: Build Serial Test (x86)
+        shell: msys2 {0}
+        run: |
+          gcc serial_test.c -o serial_test_x86.exe -lserialport -lsetupapi -lcfgmgr32 -static
+  
+      - name: Upload Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-serial-binary-x86
+          path: serial_test_x86.exe
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+  
+      - name: Install dependencies
+        run: |
+          brew update
+          brew install libserialport
+  
+      - name: Build Serial Test
+        run: |
+          # Use pkg-config to supply include paths and linker flags for libserialport
+          gcc $(pkg-config --cflags --libs libserialport) serial_test.c -o serial_test_macos
+  
+      - name: Upload Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-serial-binary
+          path: serial_test_macos
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+  
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libserialport-dev pkg-config
+  
+      - name: Build Serial Test
+        run: |
+          # Linker flags need to come after the source file to resolve symbols
+          gcc serial_test.c -o serial_test_linux $(pkg-config --cflags --libs libserialport)
+  
+      - name: Upload Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-serial-binary
+          path: serial_test_linux
+
+  build-arm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          # install the cross compiler and build tools; no armhf architecture needed
+          sudo apt-get install -y pkg-config gcc-arm-linux-gnueabihf automake autoconf libtool git make
+
+      - name: Build libserialport for ARM
+        run: |
+          # clone and cross-compile library into a local prefix
+          git clone https://github.com/sigrokproject/libserialport.git
+          cd libserialport
+          autoreconf -i
+          ./configure --host=arm-linux-gnueabihf --prefix=$(pwd)/arm-prefix
+          make -j$(nproc)
+          make install
+          # expose pkg-config files from the built library
+          export PKG_CONFIG_LIBDIR=$(pwd)/arm-prefix/lib/pkgconfig
+          echo "PKG_CONFIG_LIBDIR=$PKG_CONFIG_LIBDIR" >> $GITHUB_ENV
+
+      - name: Build Serial Test
+        run: |
+          # compile against the self-built ARM libserialport
+          arm-linux-gnueabihf-gcc serial_test.c -o serial_test_arm $(pkg-config --cflags --libs libserialport)
+
+      - name: Upload Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: arm-serial-binary
+          path: serial_test_arm
