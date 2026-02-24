@@ -1235,7 +1235,6 @@ int main(int argc, char **argv)
             printf("Options:\r\n");
             for (index = 0; index < optionCount; index++)
                 printf("    %s: %s\r\n", options[index]._optionString, options[index]._helpText);
-            printf("    --version: Print the quectool version\r\n");
             printf("\r\n");
             printf("A program to update the firmware on the Quectel LG290P GNSS receiver.\r\n");
             break;
