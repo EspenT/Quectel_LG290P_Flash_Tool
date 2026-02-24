@@ -5,6 +5,7 @@ on:
     branches:
 
 jobs:
+  build-windows-x64:
     runs-on: windows-latest
     steps:
       - name: Checkout code
