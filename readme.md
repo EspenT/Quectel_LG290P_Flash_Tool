@@ -6,6 +6,23 @@ Works on any carrier board with UART access to the chip — SparkFun breakout, *
 
 Based on [SparkFun's quectool](https://github.com/sparkfun/SparkFun_LG290P_Flash_Tool). Uses [libserialport](https://sigrok.org/wiki/Libserialport) for cross-platform serial I/O.
 
+## Releases
+
+Pre-built binaries: [Releases](https://github.com/EspenT/Quectel_LG290P_Flash_Tool/releases)
+
+| Platform | Asset | Notes |
+|----------|-------|-------|
+| Windows x64 | `quectool-windows-x64.exe` | Most PCs |
+| Windows ARM64 | `quectool-windows-arm64.exe` | Surface / WoA laptops |
+| macOS Apple Silicon | `quectool-macos-arm64` | `chmod +x` after download |
+| macOS Intel | `quectool-macos-x64` | `chmod +x` after download |
+| Linux x64 | `quectool-linux-x64` | `chmod +x` after download |
+| Linux armhf | `quectool-linux-armhf` | Raspberry Pi etc. |
+
+> **Note:** Only the **macOS arm64** build has been tested end-to-end (Waveshare LG290P). Other platform binaries are CI-built but not yet verified on hardware.
+
+CI builds all platforms on every version tag (`v*`). You can also trigger a build manually under **Actions → Build Tool Binaries**.
+
 ## macOS
 
 ### Prerequisites
@@ -68,8 +85,6 @@ gcc quectool.c -o quectool.exe -lserialport -lsetupapi -lcfgmgr32 -static
 quectool.exe COM5 LG290P03AANR02A01S.pkg
 ```
 
-Pre-built Windows binaries are available under [Releases](https://github.com/EspenT/Quectel_LG290P_Flash_Tool/releases).
-
 ## Linux
 
 ```bash
@@ -95,4 +110,7 @@ make
 
 ## CI builds
 
-GitHub Actions can build binaries for Windows, macOS, Linux, and ARM. Trigger manually via **Actions → Build Tool Binaries → Run workflow**.
+GitHub Actions builds Windows (x64 + ARM64), macOS (arm64 + x64), and Linux (x64 + armhf).
+
+- **Manual:** Actions → Build Tool Binaries → Run workflow
+- **Release:** push a tag (e.g. `v0.0.3`) — CI uploads all binaries to GitHub Releases automatically

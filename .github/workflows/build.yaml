@@ -2,141 +2,97 @@ name: Build Tool Binaries
 
 on:
   workflow_dispatch:
-    branches:
+  push:
+    tags:
+      - "v*"
 
 jobs:
   build-windows-x64:
     runs-on: windows-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-  
-      - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
           update: true
           install: >-
             mingw-w64-ucrt-x86_64-gcc
             mingw-w64-ucrt-x86_64-libserialport
-  
-      - name: Build Serial Test (x64)
+
+      - name: Build quectool (Windows x64)
         shell: msys2 {0}
         run: |
-          # We link setupapi and cfgmgr32 because libserialport needs them on Windows
-          gcc quectool.c -o quectool_x64.exe -lserialport -lsetupapi -lcfgmgr32 -static
-  
-      - name: Upload Binary
-        uses: actions/upload-artifact@v4
+          gcc quectool.c -o quectool-windows-x64.exe -lserialport -lsetupapi -lcfgmgr32 -static
+
+      - uses: actions/upload-artifact@v4
         with:
-          name: windows-serial-binary-x64
-          path: quectool_x64.exe
-  
-  build-windows-x86:
+          name: quectool-windows-x64
+          path: quectool-windows-x64.exe
+
+  build-windows-arm64:
     runs-on: windows-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-  
-      - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW32
+          msystem: CLANGARM64
           update: true
           install: >-
-            mingw-w64-i686-gcc
-  
-      - name: Build Serial Test (x86)
+            mingw-w64-clang-aarch64-clang
+            mingw-w64-clang-aarch64-libserialport
+
+      - name: Build quectool (Windows ARM64)
         shell: msys2 {0}
         run: |
-            # Build libserialport from source for i686
-            pacman -S --noconfirm git automake autoconf libtool pkg-config mingw-w64-i686-make
-            git clone https://github.com/sigrokproject/libserialport.git
-            cd libserialport
-            ./autogen.sh
-            MAKE=mingw32-make ./configure --host=i686-w64-mingw32 --prefix=$PWD/../libserialport-prefix --disable-dependency-tracking
-            MAKE=mingw32-make mingw32-make -j$(nproc)
-            MAKE=mingw32-make mingw32-make install
-            export PKG_CONFIG_LIBDIR=$PWD/../libserialport-prefix/lib/pkgconfig
-            cd ..
-            # Build your tool using the locally built libserialport
-            gcc quectool.c -o quectool_x86.exe $(pkg-config --cflags --libs libserialport) -lsetupapi -lcfgmgr32 -static
-  
-      - name: Upload Binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-serial-binary-x86
-          path: quectool_x86.exe
+          clang quectool.c -o quectool-windows-arm64.exe -lserialport -lsetupapi -lcfgmgr32 -static
 
-  build-macos:
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quectool-windows-arm64
+          path: quectool-windows-arm64.exe
+
+  build-macos-arm64:
     runs-on: macos-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-  
+      - uses: actions/checkout@v4
+
       - name: Install dependencies
-        run: |
-          brew update
-          brew install libserialport
-  
-      - name: Build Serial Test
-        run: |
-          # Use pkg-config to supply include paths and linker flags for libserialport
-          gcc $(pkg-config --cflags --libs libserialport) quectool.c -o quectool_macos
-  
-      - name: Prepare macOS .app Bundle
-        run: |
-          APP_NAME="QuecTool"
-          APP_BUNDLE="$APP_NAME.app"
-          mkdir -p "$APP_BUNDLE/Contents/MacOS"
-          mkdir -p "$APP_BUNDLE/Contents/Resources"
-          # Move the binary into the bundle
-          mv quectool_macos "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
-          # Create a minimal Info.plist
-          cat > "$APP_BUNDLE/Contents/Info.plist" <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>CFBundleName</key>
-            <string>${APP_NAME}</string>
-            <key>CFBundleDisplayName</key>
-            <string>${APP_NAME}</string>
-            <key>CFBundleExecutable</key>
-            <string>${APP_NAME}</string>
-            <key>CFBundleIdentifier</key>
-            <string>com.example.${APP_NAME}</string>
-            <key>CFBundleVersion</key>
-            <string>1.0</string>
-            <key>CFBundlePackageType</key>
-            <string>APPL</string>
-            <key>CFBundleIconFile</key>
-            <string>appicon.icns</string>
-          </dict>
-          </plist>
-          EOF
-          # Optionally, add a default icon if none exists
-          ICON_PATH=".github/workflows/appicon.icns"
-          if [ -f "$ICON_PATH" ]; then
-            cp "$ICON_PATH" "$APP_BUNDLE/Contents/Resources/appicon.icns"
-          else
-            # Create a dummy icon if not provided
-            sips -z 128 128 /System/Library/CoreServices/DefaultDesktop.jpg --out "$APP_BUNDLE/Contents/Resources/appicon.icns"
-          fi
+        run: brew install libserialport
 
-      - name: Upload macOS .app Bundle
-        uses: actions/upload-artifact@v4
+      - name: Build quectool (macOS arm64)
+        run: |
+          gcc $(pkg-config --cflags --libs libserialport) quectool.c -o quectool-macos-arm64
+
+      - uses: actions/upload-artifact@v4
         with:
-          name: macos-app-bundle
-          path: QuecTool.app
+          name: quectool-macos-arm64
+          path: quectool-macos-arm64
 
-  build-linux:
+  build-macos-x64:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: brew install libserialport
+
+      - name: Build quectool (macOS x64)
+        run: |
+          gcc $(pkg-config --cflags --libs libserialport) quectool.c -o quectool-macos-x64 -arch x86_64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quectool-macos-x64
+          path: quectool-macos-x64
+
+  build-linux-x64:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-  
-      - name: Install dependencies
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
         run: |
           sudo apt-get update
           sudo apt-get install -y git automake autoconf libtool pkg-config gcc make
@@ -147,32 +103,27 @@ jobs:
           cd libserialport
           ./autogen.sh || autoreconf -i
           ./configure --enable-static --disable-shared --prefix=$PWD/../libserialport-prefix
-          make -j$(nproc)
+          make -j"$(nproc)"
           make install
-          export PKG_CONFIG_LIBDIR=$PWD/../libserialport-prefix/lib/pkgconfig
-          echo "PKG_CONFIG_LIBDIR=$PKG_CONFIG_LIBDIR" >> $GITHUB_ENV
 
-      - name: Build Serial Test (static)
+      - name: Build quectool (Linux x64)
         run: |
-          export PKG_CONFIG_LIBDIR=$(pwd)/libserialport-prefix/lib/pkgconfig
-          gcc quectool.c -o quectool_linux $(pkg-config --cflags --static --libs libserialport)
-  
-      - name: Upload Binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-serial-binary
-          path: quectool_linux
+          export PKG_CONFIG_LIBDIR="$(pwd)/libserialport-prefix/lib/pkgconfig"
+          gcc quectool.c -o quectool-linux-x64 $(pkg-config --cflags --static --libs libserialport)
 
-  build-arm:
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quectool-linux-x64
+          path: quectool-linux-x64
+
+  build-linux-arm:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install cross-build tools
         run: |
           sudo apt-get update
-          # install the cross compiler and build tools; no armhf architecture needed
           sudo apt-get install -y pkg-config gcc-arm-linux-gnueabihf automake autoconf libtool git make
 
       - name: Build static libserialport for ARM
@@ -180,19 +131,44 @@ jobs:
           git clone https://github.com/sigrokproject/libserialport.git
           cd libserialport
           autoreconf -i
-          ./configure --host=arm-linux-gnueabihf --enable-static --disable-shared --prefix=$(pwd)/arm-prefix
-          make -j$(nproc)
+          ./configure --host=arm-linux-gnueabihf --enable-static --disable-shared --prefix="$(pwd)/arm-prefix"
+          make -j"$(nproc)"
           make install
-          export PKG_CONFIG_LIBDIR=$(pwd)/arm-prefix/lib/pkgconfig
-          echo "PKG_CONFIG_LIBDIR=$PKG_CONFIG_LIBDIR" >> $GITHUB_ENV
 
-      - name: Build Serial Test (static)
+      - name: Build quectool (Linux armhf)
         run: |
-          export PKG_CONFIG_LIBDIR=$(pwd)/libserialport/arm-prefix/lib/pkgconfig
-          arm-linux-gnueabihf-gcc quectool.c -o quectool_arm $(pkg-config --cflags --static --libs libserialport)
+          export PKG_CONFIG_LIBDIR="$(pwd)/libserialport/arm-prefix/lib/pkgconfig"
+          arm-linux-gnueabihf-gcc quectool.c -o quectool-linux-armhf $(pkg-config --cflags --static --libs libserialport)
 
-      - name: Upload Binary
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: arm-serial-binary
-          path: quectool_arm
+          name: quectool-linux-armhf
+          path: quectool-linux-armhf
+
+  release:
+    needs:
+      - build-windows-x64
+      - build-windows-arm64
+      - build-macos-arm64
+      - build-macos-x64
+      - build-linux-x64
+      - build-linux-arm
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List release assets
+        run: find dist -type f | sort
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**
+          generate_release_notes: true
