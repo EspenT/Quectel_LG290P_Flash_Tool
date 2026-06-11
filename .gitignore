@@ -1,0 +1,6 @@
+quectool
+quectool.exe
+quectool_*
+QuecTool.app
+*.o
+*.dSYM/

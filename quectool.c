@@ -8,6 +8,8 @@
   quectool is a command-line tool to update LG290P GNSS firmware.
 
   To compile for Windows: gcc quectool.c -o quectool.exe -lserialport -lsetupapi -lcfgmgr32 -static
+  To compile for macOS:   make   (requires: brew install libserialport)
+  To compile for Linux:   gcc quectool.c -o quectool -lserialport
 */
 
 #define TOOL_VERSION "0.0.1"
